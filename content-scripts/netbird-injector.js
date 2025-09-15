@@ -1,8 +1,8 @@
 // Content script to inject RustDesk buttons into NetBird dashboard
 // This script runs on the NetBird dashboard page
 
-let osType = 'unknown';
-let buttonStyle = 'default';
+var osType = 'unknown';
+var buttonStyle = 'icon';
 
 console.log('NetDesk content script loaded');
 
@@ -24,7 +24,9 @@ chrome.storage.sync.get(['buttonStyle'], (result) => {
   console.log("Button style:", buttonStyle);
 });
 
-let addressColIndex = -1;
+var addressColIndex = -1;
+var __netdeskObserverSetup = false;
+var __netdeskIntervalSetup = false;
 function detectAddressColumnIndex() {
   try {
     const headerRow = document.querySelector('thead tr');
@@ -305,6 +307,11 @@ function processPeerRow(row, index) {
 
 // Function to observe changes in the DOM and inject buttons when needed
 function observeDashboard() {
+  if (__netdeskObserverSetup) {
+    console.log('NetDesk observer already set up; skipping re-init');
+    return;
+  }
+  __netdeskObserverSetup = true;
   // Create a MutationObserver to watch for changes in the dashboard
   const observer = new MutationObserver((mutations) => {
     let shouldInject = false;
@@ -347,4 +354,7 @@ if (document.readyState === 'loading') {
 }
 
 // Also run periodically in case the dashboard updates in a way that bypasses MutationObserver
-setInterval(injectRustDeskButtons, 5000);
+if (!__netdeskIntervalSetup) {
+  setInterval(injectRustDeskButtons, 5000);
+  __netdeskIntervalSetup = true;
+}

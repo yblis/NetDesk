@@ -1,7 +1,7 @@
 /* Styles for RustDesk buttons in NetBird dashboard */
 
 .rustdesk-connect-btn {
-  background-color: #4CAF50; /* Green background */
+  background-color: #32363D; /* Dark gray (same as icon mode) */
   border: none; /* Remove borders */
   color: white; /* White text */
   padding: 6px 10px; /* Some padding */
@@ -21,7 +21,7 @@
 }
 
 .rustdesk-connect-btn:hover {
-  background-color: #45a049; /* Darker green on hover */
+  background-color: #3A3F47; /* Slightly lighter/darker gray on hover */
   transform: scale(1.05); /* Slightly enlarge on hover */
 }
 
@@ -29,10 +29,7 @@
   transform: scale(0.95); /* Slightly shrink on click */
 }
 
-.rustdesk-connect-btn:not(.icon-style)::before {
-  content: "R "; /* Add RustDesk icon prefix */
-  font-weight: bold;
-}
+/* No prefix letter for text button */
 
 /* Alternative styling with icon */
 .rustdesk-connect-btn.icon-style {

@@ -8,9 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
       document.getElementById('custom-url').value = result.customUrl;
     }
     
-    if (result.buttonStyle) {
-      document.getElementById('button-style').value = result.buttonStyle;
-    }
+    document.getElementById('button-style').value = result.buttonStyle || 'icon';
 
     if (typeof result.rustdeskPort !== 'undefined' && result.rustdeskPort !== null && result.rustdeskPort !== '') {
       document.getElementById('rustdesk-port').value = result.rustdeskPort;
@@ -56,7 +54,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
 document.getElementById('reset-btn').addEventListener('click', () => {
   // Reset form fields
   document.getElementById('custom-url').value = '';
-  document.getElementById('button-style').value = 'default';
+  document.getElementById('button-style').value = 'icon';
   document.getElementById('rustdesk-port').value = '';
   
   // Remove saved settings
