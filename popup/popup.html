@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <h2>NetDesk Connector</h2>
+    <div class="status">
+      <p>OS Detected: <span id="os-info">Detecting...</span></p>
+      <p>Status: <span id="extension-status">Active</span></p>
+    </div>
+    <div class="instructions">
+      <h3>How to use:</h3>
+      <ol>
+        <li>Navigate to NetBird dashboard</li>
+        <li>RustDesk buttons will appear next to peers</li>
+        <li>Click a button to connect via RustDesk</li>
+      </ol>
+    </div>
+    <div class="actions">
+      <button id="options-btn">Extension Options</button>
+      <button id="help-btn">Help</button>
+    </div>
+  </div>
+  <script src="popup.js"></script>
+</body>
+</html>

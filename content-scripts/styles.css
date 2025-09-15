@@ -1,0 +1,66 @@
+/* Styles for RustDesk buttons in NetBird dashboard */
+
+.rustdesk-connect-btn {
+  background-color: #4CAF50; /* Green background */
+  border: none; /* Remove borders */
+  color: white; /* White text */
+  padding: 6px 10px; /* Some padding */
+  text-align: center; /* Centered text */
+  text-decoration: none; /* Remove underline */
+  display: inline-block; /* Get it to display correctly */
+  font-size: 14px; /* Increase font size */
+  margin: 2px; /* Some margin */
+  cursor: pointer; /* Pointer cursor on hover */
+  border-radius: 4px; /* Rounded corners */
+  font-weight: bold; /* Bold text */
+  transition: all 0.3s; /* Smooth transition */
+  min-width: 30px; /* Minimum width */
+  height: 30px; /* Fixed height */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2); /* Subtle shadow */
+  z-index: 1000; /* Ensure button is visible */
+}
+
+.rustdesk-connect-btn:hover {
+  background-color: #45a049; /* Darker green on hover */
+  transform: scale(1.05); /* Slightly enlarge on hover */
+}
+
+.rustdesk-connect-btn:active {
+  transform: scale(0.95); /* Slightly shrink on click */
+}
+
+.rustdesk-connect-btn:not(.icon-style)::before {
+  content: "R "; /* Add RustDesk icon prefix */
+  font-weight: bold;
+}
+
+/* Alternative styling with icon */
+.rustdesk-connect-btn.icon-style {
+  /* Square with rounded corners, dark gray background */
+  background-color: #32363D;
+  border-radius: 8px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rustdesk-connect-btn.icon-style:hover {
+  background-color: #3A3F47;
+}
+
+/* Icon Only image sizing */
+.rustdesk-connect-btn.icon-style img {
+  width: 18px;
+  height: 18px;
+  display: block;
+}
+
+/* Container for the button */
+.rustdesk-button-container {
+  display: inline-block;
+  margin-left: 10px;
+  vertical-align: middle;
+}

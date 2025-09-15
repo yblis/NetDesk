@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link rel="stylesheet" href="options.css">
+</head>
+<body>
+  <div class="options-container">
+    <h2>NetDesk Connector Options</h2>
+    <div class="option-group">
+      <label for="custom-url">Custom NetBird Dashboard URL:</label>
+      <input type="url" id="custom-url" placeholder="https://your-netbird-instance.com">
+      <p class="help-text">Enter a custom URL if you're not using the default NetBird dashboard.</p>
+    </div>
+    <div class="option-group">
+      <label for="button-style">Button Style:</label>
+      <select id="button-style">
+        <option value="default">Default (Text Button)</option>
+        <option value="icon">Icon Only</option>
+      </select>
+    </div>
+    <div class="option-group">
+      <label for="rustdesk-port">RustDesk Port:</label>
+      <input type="number" id="rustdesk-port" placeholder="21118" min="1" max="65535">
+      <p class="help-text">Optionnel. Laisse vide pour utiliser le port par défaut 21118.</p>
+    </div>
+    <div class="actions">
+      <button id="save-btn">Save Settings</button>
+      <button id="reset-btn">Reset to Defaults</button>
+    </div>
+    <div id="status-message" class="status"></div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
