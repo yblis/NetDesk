@@ -2,6 +2,9 @@
 
 A Chrome extension that adds RustDesk connection buttons to the NetBird dashboard.
 
+<img width="1367" height="757" alt="image" src="https://github.com/user-attachments/assets/68d1db5e-779a-4243-9dc0-62b329507ec6" />
+
+
 ## Features
 
 - Adds a "RustDesk" button next to each peer in the NetBird dashboard
