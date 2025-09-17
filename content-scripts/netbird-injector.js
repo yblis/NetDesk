@@ -27,6 +27,76 @@ chrome.storage.sync.get(['buttonStyle'], (result) => {
 var addressColIndex = -1;
 var __netdeskObserverSetup = false;
 var __netdeskIntervalSetup = false;
+var __netdeskHistoryHooked = false;
+var lastKnownPath = (typeof window !== 'undefined' && window.location && window.location.pathname) || '';
+
+function isPeersPage() {
+  try {
+    const path = (window.location && window.location.pathname) || '';
+    if (!path) return false;
+    if (path === '/peers') return true;
+    return path.startsWith('/peers/');
+  } catch (e) {
+    return false;
+  }
+}
+
+function removeRustDeskButtons() {
+  if (typeof document === 'undefined') return;
+  const nodes = document.querySelectorAll('.rustdesk-button-container');
+  nodes.forEach((node) => {
+    if (!node) return;
+    if (typeof node.remove === 'function') {
+      node.remove();
+    } else if (node.parentElement) {
+      node.parentElement.removeChild(node);
+    }
+  });
+}
+
+function handleRouteChange() {
+  try {
+    const currentPath = (window.location && window.location.pathname) || '';
+    if (currentPath === lastKnownPath) return;
+    lastKnownPath = currentPath;
+  } catch (e) {
+    // Bail if we cannot read window.location
+    return;
+  }
+
+  addressColIndex = -1;
+  removeRustDeskButtons();
+
+  if (isPeersPage()) {
+    setTimeout(injectRustDeskButtons, 100);
+  }
+}
+
+function setupRouteObserver() {
+  if (__netdeskHistoryHooked) return;
+  __netdeskHistoryHooked = true;
+  try {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('popstate', handleRouteChange);
+    }
+    if (typeof history !== 'undefined') {
+      ['pushState', 'replaceState'].forEach((method) => {
+        const original = history[method];
+        if (typeof original === 'function') {
+          history[method] = function(...args) {
+            const result = original.apply(this, args);
+            handleRouteChange();
+            return result;
+          };
+        }
+      });
+    }
+  } catch (e) {
+    console.warn('NetDesk route observer setup failed:', e);
+  }
+}
+
+setupRouteObserver();
 function detectAddressColumnIndex() {
   try {
     const headerRow = document.querySelector('thead tr');
@@ -180,6 +250,11 @@ function createRustDeskButton(peerId, peerName, peerIp, peerHost = '') {
 // Function to inject buttons into the peer table
 function injectRustDeskButtons() {
   console.log('Attempting to inject RustDesk buttons');
+
+  if (!isPeersPage()) {
+    removeRustDeskButtons();
+    return;
+  }
   
   // Try to find the peer table rows in NetBird dashboard
   const peerRows = document.querySelectorAll('tbody tr[data-row-id]');
