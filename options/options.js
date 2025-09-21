@@ -1,13 +1,47 @@
 // Options script for NetDesk Chrome Extension
 
+const DEFAULT_SERVICE_PORTS = [80, 443, 8080, 3000];
+
+function normalizePortList(raw) {
+  const tokens = (raw || '').split(/[\n,]+/);
+  const seen = new Set();
+  const ports = [];
+
+  for (const token of tokens) {
+    const trimmed = token.trim();
+    if (!trimmed) continue;
+    if (!/^\d+$/.test(trimmed)) {
+      return { ok: false, error: `Port invalide "${trimmed}". Utilise uniquement des nombres entiers.` };
+    }
+    const n = Number(trimmed);
+    if (!Number.isInteger(n) || n < 1 || n > 65535) {
+      return { ok: false, error: `Port hors plage : ${trimmed}. Choisis un nombre entre 1 et 65535.` };
+    }
+    if (!seen.has(n)) {
+      seen.add(n);
+      ports.push(n);
+    }
+  }
+
+  if (ports.length === 0) {
+    return { ok: true, ports: DEFAULT_SERVICE_PORTS.slice(), usedDefault: true };
+  }
+
+  return { ok: true, ports };
+}
+
+function formatPortList(ports) {
+  const list = Array.isArray(ports) && ports.length > 0 ? ports : DEFAULT_SERVICE_PORTS;
+  return list.join('\n');
+}
+
 // Load saved settings when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-  // Load saved settings
-  chrome.storage.sync.get(['customUrl', 'buttonStyle', 'rustdeskPort'], (result) => {
+  chrome.storage.sync.get(['customUrl', 'buttonStyle', 'rustdeskPort', 'servicePorts'], (result) => {
     if (result.customUrl) {
       document.getElementById('custom-url').value = result.customUrl;
     }
-    
+
     document.getElementById('button-style').value = result.buttonStyle || 'icon';
 
     if (typeof result.rustdeskPort !== 'undefined' && result.rustdeskPort !== null && result.rustdeskPort !== '') {
@@ -15,6 +49,8 @@ document.addEventListener('DOMContentLoaded', () => {
     } else {
       document.getElementById('rustdesk-port').value = '';
     }
+
+    document.getElementById('service-ports').value = formatPortList(result.servicePorts);
   });
 });
 
@@ -32,17 +68,21 @@ document.getElementById('save-btn').addEventListener('click', () => {
     }
     rustdeskPort = n;
   }
-  
-  // Save settings
+
+  const parsedPorts = normalizePortList(document.getElementById('service-ports').value);
+  if (!parsedPorts.ok) {
+    showStatusMessage(parsedPorts.error, 'error');
+    return;
+  }
+
   chrome.storage.sync.set({
     customUrl: customUrl,
     buttonStyle: buttonStyle,
-    rustdeskPort: rustdeskPort
+    rustdeskPort: rustdeskPort,
+    servicePorts: parsedPorts.ports
   }, () => {
-    // Show success message
     showStatusMessage('Settings saved successfully!', 'success');
-    
-    // Clear message after 3 seconds
+
     setTimeout(() => {
       document.getElementById('status-message').textContent = '';
       document.getElementById('status-message').className = 'status';
@@ -52,16 +92,14 @@ document.getElementById('save-btn').addEventListener('click', () => {
 
 // Reset to defaults when the reset button is clicked
 document.getElementById('reset-btn').addEventListener('click', () => {
-  // Reset form fields
   document.getElementById('custom-url').value = '';
   document.getElementById('button-style').value = 'icon';
   document.getElementById('rustdesk-port').value = '';
-  
-  // Remove saved settings
-  chrome.storage.sync.remove(['customUrl', 'buttonStyle', 'rustdeskPort'], () => {
+  document.getElementById('service-ports').value = formatPortList(DEFAULT_SERVICE_PORTS);
+
+  chrome.storage.sync.remove(['customUrl', 'buttonStyle', 'rustdeskPort', 'servicePorts'], () => {
     showStatusMessage('Settings reset to defaults!', 'success');
-    
-    // Clear message after 3 seconds
+
     setTimeout(() => {
       document.getElementById('status-message').textContent = '';
       document.getElementById('status-message').className = 'status';
@@ -69,14 +107,12 @@ document.getElementById('reset-btn').addEventListener('click', () => {
   });
 });
 
-// Function to show status messages
 function showStatusMessage(message, type) {
   const statusElement = document.getElementById('status-message');
   statusElement.textContent = message;
   statusElement.className = 'status ' + type;
 }
 
-// Validate URL input
 document.getElementById('custom-url').addEventListener('input', (e) => {
   const url = e.target.value;
   if (url && !url.startsWith('http://') && !url.startsWith('https://')) {
@@ -84,11 +120,9 @@ document.getElementById('custom-url').addEventListener('input', (e) => {
   }
 });
 
-// Ensure only numeric input in port field
 document.getElementById('rustdesk-port').addEventListener('input', (e) => {
   const val = e.target.value;
-  if (val === '') return; // allow empty
-  // strip non-digits
+  if (val === '') return;
   const digits = val.replace(/\D+/g, '');
   e.target.value = digits;
 });

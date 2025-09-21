@@ -35,7 +35,7 @@ label {
   color: #555;
 }
 
-input[type="url"], select {
+input[type="url"], select, textarea {
   width: 100%;
   padding: 10px;
   border: 1px solid #ddd;
@@ -44,7 +44,12 @@ input[type="url"], select {
   box-sizing: border-box;
 }
 
-input[type="url"]:focus, select:focus {
+textarea {
+  min-height: 96px;
+  resize: vertical;
+}
+
+input[type="url"]:focus, select:focus, textarea:focus {
   border-color: #4CAF50;
   outline: none;
   box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);

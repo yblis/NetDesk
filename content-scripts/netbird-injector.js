@@ -3,6 +3,8 @@
 
 var osType = 'unknown';
 var buttonStyle = 'icon';
+const DEFAULT_SERVICE_PORTS = [80, 443, 8080, 3000];
+var servicePorts = DEFAULT_SERVICE_PORTS.slice();
 
 console.log('NetDesk content script loaded');
 
@@ -16,13 +18,264 @@ chrome.runtime.sendMessage({action: "getOS"}, (response) => {
   }
 });
 
+function sanitizePortArray(value) {
+  if (!Array.isArray(value)) return DEFAULT_SERVICE_PORTS.slice();
+  const seen = new Set();
+  const ports = [];
+  for (const entry of value) {
+    const n = Number(entry);
+    if (!Number.isInteger(n) || n < 1 || n > 65535) continue;
+    if (!seen.has(n)) {
+      seen.add(n);
+      ports.push(n);
+    }
+  }
+  return ports.length > 0 ? ports : DEFAULT_SERVICE_PORTS.slice();
+}
+
 // Get extension settings
-chrome.storage.sync.get(['buttonStyle'], (result) => {
+chrome.storage.sync.get(['buttonStyle', 'servicePorts'], (result) => {
   if (result.buttonStyle) {
     buttonStyle = result.buttonStyle;
   }
+  if (result.servicePorts) {
+    servicePorts = sanitizePortArray(result.servicePorts);
+  }
   console.log("Button style:", buttonStyle);
+  console.log('Service ports:', servicePorts.join(', '));
 });
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'sync') return;
+  if (changes.buttonStyle) {
+    const nv = changes.buttonStyle.newValue;
+    if (nv) buttonStyle = nv;
+  }
+  if (changes.servicePorts) {
+    servicePorts = sanitizePortArray(changes.servicePorts.newValue);
+    console.log('Service ports updated:', servicePorts.join(', '));
+  }
+});
+
+var lastMenuTriggerInfo = null;
+
+function resolvePeerContext(row) {
+  if (!row) return { peerName: '', peerHost: '', peerIp: '' };
+  let peerName = '';
+  try {
+    peerName = (row.dataset && row.dataset.netdeskPeerName) || '';
+  } catch (e) {
+    peerName = '';
+  }
+  if (!peerName) {
+    const primaryName = row.querySelector && row.querySelector('[data-testid="peer-name-cell"] .truncate');
+    if (primaryName && primaryName.textContent) {
+      peerName = primaryName.textContent.trim();
+    } else {
+      const fallbackName = row.querySelector && row.querySelector('div.font-medium .truncate');
+      if (fallbackName && fallbackName.textContent) {
+        peerName = fallbackName.textContent.trim();
+      }
+    }
+  }
+
+  let peerHost = (row.dataset && row.dataset.netdeskPeerHost) || '';
+  let peerIp = (row.dataset && row.dataset.netdeskPeerIp) || '';
+  if (!peerHost && !peerIp) {
+    const extracted = extractAddressFromRow(row) || {};
+    peerHost = extracted.host || '';
+    peerIp = extracted.ip || '';
+  }
+
+  if (row.dataset) {
+    row.dataset.netdeskPeerName = peerName || '';
+    row.dataset.netdeskPeerHost = peerHost || '';
+    row.dataset.netdeskPeerIp = peerIp || '';
+  }
+
+  return { peerName, peerHost, peerIp };
+}
+
+function handleMenuTrigger(event) {
+  if (!event || !event.target || typeof event.target.closest !== 'function') return;
+  if (event.type === 'keydown') {
+    const key = event.key || '';
+    if (key !== 'Enter' && key !== ' ') return;
+  }
+  const trigger = event.target.closest('button[aria-haspopup="menu"], [role="button"][aria-haspopup="menu"]');
+  if (!trigger) return;
+  const row = trigger.closest && trigger.closest('tr[data-row-id]');
+  if (!row) return;
+  const context = resolvePeerContext(row);
+  if (trigger.dataset) {
+    trigger.dataset.netdeskPeerName = context.peerName || '';
+    trigger.dataset.netdeskPeerHost = context.peerHost || '';
+    trigger.dataset.netdeskPeerIp = context.peerIp || '';
+  }
+  lastMenuTriggerInfo = {
+    trigger: trigger,
+    row: row,
+    peerName: context.peerName,
+    peerHost: context.peerHost,
+    peerIp: context.peerIp
+  };
+}
+
+['pointerdown', 'keydown'].forEach((eventName) => {
+  try {
+    document.addEventListener(eventName, handleMenuTrigger, true);
+  } catch (e) {
+    console.warn('Failed to register menu trigger listener for', eventName, e);
+  }
+});
+
+function cssEscapeValue(value) {
+  if (typeof value !== 'string') return '';
+  if (typeof CSS !== 'undefined' && typeof CSS.escape === 'function') {
+    return CSS.escape(value);
+  }
+  return value.replace(/([!"#$%&'()*+,./:;<=>?@[\\]^`{|}~])/g, '\\$1');
+}
+
+function findTriggerForMenu(menuEl) {
+  if (!menuEl) return null;
+  const menuId = menuEl.id;
+  if (menuId) {
+    const escapedId = cssEscapeValue(menuId);
+    const viaControls = document.querySelector(`[aria-controls="${escapedId}"]`);
+    if (viaControls) return viaControls;
+  }
+  const labelledBy = menuEl.getAttribute && menuEl.getAttribute('aria-labelledby');
+  if (labelledBy) {
+    const labelledTrigger = document.getElementById(labelledBy);
+    if (labelledTrigger) return labelledTrigger;
+  }
+  if (lastMenuTriggerInfo && lastMenuTriggerInfo.trigger) {
+    return lastMenuTriggerInfo.trigger;
+  }
+  return null;
+}
+
+function getPeerInfoFromTrigger(trigger) {
+  if (!trigger) return null;
+  const row = (trigger.closest && trigger.closest('tr[data-row-id]')) || (lastMenuTriggerInfo && lastMenuTriggerInfo.row) || null;
+  const peerName = (trigger.dataset && trigger.dataset.netdeskPeerName) || (row && row.dataset && row.dataset.netdeskPeerName) || '';
+  const peerHost = (trigger.dataset && trigger.dataset.netdeskPeerHost) || (row && row.dataset && row.dataset.netdeskPeerHost) || '';
+  const peerIp = (trigger.dataset && trigger.dataset.netdeskPeerIp) || (row && row.dataset && row.dataset.netdeskPeerIp) || '';
+  return { trigger, row, peerName, peerHost, peerIp };
+}
+
+function buildPortUrl(peerInfo, port) {
+  if (!peerInfo) return null;
+  const rawTarget = (peerInfo.peerHost && peerInfo.peerHost.trim()) || (peerInfo.peerIp && peerInfo.peerIp.trim());
+  if (!rawTarget) return null;
+  const portNumber = Number(port);
+  if (!Number.isInteger(portNumber)) return null;
+  const cleanTarget = rawTarget.replace(/^https?:\/\//i, '').replace(/\/+$/g, '');
+  const needsBrackets = cleanTarget.includes(':') && !cleanTarget.includes(']');
+  const hostPart = needsBrackets ? `[${cleanTarget}]` : cleanTarget;
+  const protocol = portNumber === 443 ? 'https' : 'http';
+  return `${protocol}://${hostPart}:${portNumber}`;
+}
+
+function createPortMenuItem(peerInfo, port, targetUrl) {
+  const menuItem = document.createElement('div');
+  menuItem.setAttribute('role', 'menuitem');
+  menuItem.setAttribute('tabindex', '-1');
+  menuItem.className = 'relative flex select-none items-center rounded-md pr-2 pl-3 py-1.5 text-sm outline-none transition-colors focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer dark:focus:bg-nb-gray-900 dark:focus:text-gray-50 netdesk-port-item';
+  const inner = document.createElement('div');
+  inner.className = 'flex gap-3 items-center w-full justify-between';
+  const labelSpan = document.createElement('span');
+  labelSpan.textContent = `Open port ${port}`;
+  inner.appendChild(labelSpan);
+  const targetSpan = document.createElement('span');
+  targetSpan.className = 'text-xs text-gray-500 dark:text-gray-400';
+  const displayTarget = peerInfo.peerHost || peerInfo.peerIp || peerInfo.peerName || '';
+  targetSpan.textContent = displayTarget;
+  inner.appendChild(targetSpan);
+  menuItem.appendChild(inner);
+  menuItem.addEventListener('click', () => {
+    if (!targetUrl) return;
+    chrome.runtime.sendMessage({ action: 'openPortTab', url: targetUrl }, (response) => {
+      if (chrome.runtime && chrome.runtime.lastError) {
+        console.warn('Failed to open port tab:', chrome.runtime.lastError.message);
+      } else if (response && response.error) {
+        console.warn('Failed to open port tab:', response.error);
+      }
+    });
+  });
+  return menuItem;
+}
+
+function findPortInsertAnchor(menuEl) {
+  const separators = Array.from(menuEl.querySelectorAll('div[role="separator"]')).filter((node) => !node.classList.contains('netdesk-port-separator'));
+  if (separators.length > 0) {
+    return separators[separators.length - 1];
+  }
+  const deleteCandidate = Array.from(menuEl.children || []).find((child) => {
+    if (!child || child.getAttribute('role') !== 'menuitem') return false;
+    const text = (child.textContent || '').toLowerCase();
+    return text.includes('delete') || text.includes('remove');
+  });
+  return deleteCandidate || null;
+}
+
+function injectPortLinks(menuEl, peerInfo) {
+  if (!menuEl || menuEl.dataset.netdeskPortsInjected === '1') return;
+  if (!peerInfo || !peerInfo.row) return;
+  const targetExists = (peerInfo.peerHost && peerInfo.peerHost.trim()) || (peerInfo.peerIp && peerInfo.peerIp.trim());
+  if (!targetExists) return;
+  const ports = (Array.isArray(servicePorts) && servicePorts.length > 0) ? servicePorts : DEFAULT_SERVICE_PORTS;
+  const fragment = document.createDocumentFragment();
+  let itemsCount = 0;
+  for (const port of ports) {
+    const url = buildPortUrl(peerInfo, port);
+    if (!url) continue;
+    const item = createPortMenuItem(peerInfo, port, url);
+    fragment.appendChild(item);
+    itemsCount++;
+  }
+  if (itemsCount === 0) return;
+  const separator = document.createElement('div');
+  separator.setAttribute('role', 'separator');
+  separator.setAttribute('aria-orientation', 'horizontal');
+  separator.className = '-mx-1 my-1 h-px bg-gray-100 dark:bg-nb-gray-910 netdesk-port-separator';
+  fragment.insertBefore(separator, fragment.firstChild);
+  const anchor = findPortInsertAnchor(menuEl);
+  if (anchor && anchor.parentNode === menuEl) {
+    menuEl.insertBefore(fragment, anchor);
+  } else {
+    menuEl.appendChild(fragment);
+  }
+  menuEl.dataset.netdeskPortsInjected = '1';
+}
+
+function injectPortsForMenuElement(menuEl) {
+  if (!menuEl || menuEl.dataset.netdeskPortsInjected === '1') return;
+  const trigger = findTriggerForMenu(menuEl);
+  let peerInfo = getPeerInfoFromTrigger(trigger);
+  if ((!peerInfo || !peerInfo.row) && lastMenuTriggerInfo) {
+    peerInfo = lastMenuTriggerInfo;
+  }
+  if (!peerInfo || !peerInfo.row) return;
+  if ((!peerInfo.peerHost || !peerInfo.peerHost.trim()) && (!peerInfo.peerIp || !peerInfo.peerIp.trim())) {
+    const resolved = resolvePeerContext(peerInfo.row);
+    peerInfo.peerHost = resolved.peerHost;
+    peerInfo.peerIp = resolved.peerIp;
+    peerInfo.peerName = peerInfo.peerName || resolved.peerName;
+  }
+  injectPortLinks(menuEl, peerInfo);
+}
+
+function handleMenuMutation(node) {
+  if (!node || node.nodeType !== 1) return;
+  const el = node;
+  if (el.getAttribute && el.getAttribute('role') === 'menu') {
+    injectPortsForMenuElement(el);
+  }
+  const childMenus = el.querySelectorAll ? el.querySelectorAll('[role="menu"]') : [];
+  childMenus.forEach((menu) => injectPortsForMenuElement(menu));
+}
 
 var addressColIndex = -1;
 var __netdeskObserverSetup = false;
@@ -322,6 +575,9 @@ function processPeerRow(row, index) {
       if (peerName && peerId) {
         const { host: peerHost, ip: peerIp } = extractAddressFromRow(row);
         console.log(`Row ${index} ADDRESS parsed: host='${peerHost}', ip='${peerIp}'`);
+        row.dataset.netdeskPeerName = peerName;
+        row.dataset.netdeskPeerHost = peerHost || '';
+        row.dataset.netdeskPeerIp = peerIp || '';
         
         const button = createRustDeskButton(peerId, peerName, peerIp, peerHost);
         
@@ -358,6 +614,9 @@ function processPeerRow(row, index) {
       if (peerName && peerId) {
         const { host: peerHost, ip: peerIp } = extractAddressFromRow(row);
         console.log(`Row ${index} ADDRESS parsed (alt): host='${peerHost}', ip='${peerIp}'`);
+        row.dataset.netdeskPeerName = peerName;
+        row.dataset.netdeskPeerHost = peerHost || '';
+        row.dataset.netdeskPeerIp = peerIp || '';
         
         const button = createRustDeskButton(peerId, peerName, peerIp, peerHost);
         
@@ -392,11 +651,17 @@ function observeDashboard() {
     let shouldInject = false;
     
     mutations.forEach((mutation) => {
-      // New nodes added
-      if (mutation.type === 'childList' && mutation.addedNodes.length > 0) shouldInject = true;
-      // Status badge updated in-place
+      if (mutation.type === 'childList') {
+        if (mutation.addedNodes.length > 0) {
+          shouldInject = true;
+          mutation.addedNodes.forEach((node) => handleMenuMutation(node));
+        }
+      }
       if (mutation.type === 'attributes') {
         const t = mutation.target;
+        if (t && t.getAttribute && t.getAttribute('role') === 'menu' && t.getAttribute('data-state') === 'open') {
+          injectPortsForMenuElement(t);
+        }
         if (t && t.matches && (t.matches('span[data-cy="circle-icon"]') || t.matches('.bg-green-400, .bg-nb-gray-500'))) {
           shouldInject = true;
         }

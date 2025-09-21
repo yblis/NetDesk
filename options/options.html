@@ -24,6 +24,11 @@
       <input type="number" id="rustdesk-port" placeholder="21118" min="1" max="65535">
       <p class="help-text">Optionnel. Laisse vide pour utiliser le port par défaut 21118.</p>
     </div>
+    <div class="option-group">
+      <label for="service-ports">Ports à afficher dans le menu contextuel :</label>
+      <textarea id="service-ports" rows="4" placeholder="80\n443\n8080\n3000"></textarea>
+      <p class="help-text">Un port par ligne. Ces ports s'affichent dans le menu d'actions pour ouvrir l'hôte dans un nouvel onglet.</p>
+    </div>
     <div class="actions">
       <button id="save-btn">Save Settings</button>
       <button id="reset-btn">Reset to Defaults</button>

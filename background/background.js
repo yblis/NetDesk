@@ -87,7 +87,7 @@ try {
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
  if (request.action === "getOS") {
     sendResponse({os: detectOS()});
-  } else if (request.action === "launchRustDesk") {
+ } else if (request.action === "launchRustDesk") {
     // Attempt to launch RustDesk with the provided connection info
     const { peerId, peerIp, peerHost, os } = request;
 
@@ -122,6 +122,26 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error("Failed to launch RustDesk:", error);
         sendResponse({ success: false, error: error.message, command, url: launchUrl });
       });
+  } else if (request.action === "openPortTab") {
+    const targetUrl = typeof request.url === 'string' ? request.url : '';
+    if (!targetUrl) {
+      sendResponse({ success: false, error: 'Missing URL for port tab.' });
+      return true;
+    }
+    try {
+      chrome.tabs.create({ url: targetUrl }, (tab) => {
+        const err = chrome.runtime.lastError;
+        if (err) {
+          console.warn('[NetDesk] Failed to open port tab:', err.message);
+          sendResponse({ success: false, error: err.message });
+          return;
+        }
+        sendResponse({ success: true, tabId: tab && tab.id ? tab.id : undefined });
+      });
+    } catch (e) {
+      console.warn('[NetDesk] tabs.create failed:', e);
+      sendResponse({ success: false, error: e.message || String(e) });
+    }
   }
   
   // Return true to indicate we'll send a response asynchronously
