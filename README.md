@@ -12,6 +12,7 @@ A Chrome extension that adds RustDesk connection buttons to the NetBird dashboar
 - Launches the appropriate RustDesk client for your OS
 - Supports custom NetBird dashboard URLs
 - Configurable button styles (text or icon)
+- Injects configurable "Open port" links in the peer action menu to launch service tabs quickly
 
 ## Installation
 
@@ -34,6 +35,7 @@ You can configure the extension by clicking the extension icon and selecting "Op
 
 - Set a custom NetBird dashboard URL
 - Choose between text or icon-only button styles
+- Configure the list of ports that appear in the peer action menu (defaults: 80, 443, 8080, 3000)
 
 ## How It Works
 
