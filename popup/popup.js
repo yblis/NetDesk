@@ -16,5 +16,5 @@ document.getElementById('options-btn').addEventListener('click', () => {
 
 document.getElementById('help-btn').addEventListener('click', () => {
   // Open help documentation in a new tab
-  chrome.tabs.create({url: 'https://github.com/rustdesk/rustdesk'});
+  chrome.tabs.create({url: 'https://github.com/yblis/NetDesk'});
 });
