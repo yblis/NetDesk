@@ -37,10 +37,13 @@ function formatPortList(ports) {
 
 // Load saved settings when the page loads
 document.addEventListener('DOMContentLoaded', () => {
-  chrome.storage.sync.get(['customUrl', 'buttonStyle', 'rustdeskPort', 'servicePorts'], (result) => {
+  chrome.storage.sync.get(['customUrl', 'buttonStyle', 'rustdeskPort', 'servicePorts', 'rustdeskEnabled'], (result) => {
     if (result.customUrl) {
       document.getElementById('custom-url').value = result.customUrl;
     }
+
+    // RustDesk enabled by default
+    document.getElementById('rustdesk-enabled').checked = result.rustdeskEnabled !== false;
 
     document.getElementById('button-style').value = result.buttonStyle || 'icon';
 
@@ -57,6 +60,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // Save settings when the save button is clicked
 document.getElementById('save-btn').addEventListener('click', () => {
   const customUrl = document.getElementById('custom-url').value;
+  const rustdeskEnabled = document.getElementById('rustdesk-enabled').checked;
   const buttonStyle = document.getElementById('button-style').value;
   const portRaw = document.getElementById('rustdesk-port').value.trim();
   let rustdeskPort = undefined;
@@ -77,6 +81,7 @@ document.getElementById('save-btn').addEventListener('click', () => {
 
   chrome.storage.sync.set({
     customUrl: customUrl,
+    rustdeskEnabled: rustdeskEnabled,
     buttonStyle: buttonStyle,
     rustdeskPort: rustdeskPort,
     servicePorts: parsedPorts.ports
@@ -93,11 +98,12 @@ document.getElementById('save-btn').addEventListener('click', () => {
 // Reset to defaults when the reset button is clicked
 document.getElementById('reset-btn').addEventListener('click', () => {
   document.getElementById('custom-url').value = '';
+  document.getElementById('rustdesk-enabled').checked = true;
   document.getElementById('button-style').value = 'icon';
   document.getElementById('rustdesk-port').value = '';
   document.getElementById('service-ports').value = formatPortList(DEFAULT_SERVICE_PORTS);
 
-  chrome.storage.sync.remove(['customUrl', 'buttonStyle', 'rustdeskPort', 'servicePorts'], () => {
+  chrome.storage.sync.remove(['customUrl', 'rustdeskEnabled', 'buttonStyle', 'rustdeskPort', 'servicePorts'], () => {
     showStatusMessage('Settings reset to defaults!', 'success');
 
     setTimeout(() => {

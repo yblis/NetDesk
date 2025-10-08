@@ -61,3 +61,16 @@
   margin-left: 10px;
   vertical-align: middle;
 }
+
+/* Custom hover styles for RustDesk and port menu items */
+.netdesk-rustdesk-item:hover,
+.netdesk-port-item:hover {
+  background-color: rgba(63, 68, 75, 0.3) !important; /* #3F444B4D */
+  color: #AAB4BD !important;
+}
+
+/* Apply color to inner text elements on hover */
+.netdesk-rustdesk-item:hover span,
+.netdesk-port-item:hover span {
+  color: #AAB4BD !important;
+}
