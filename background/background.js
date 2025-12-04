@@ -5,13 +5,13 @@
 function detectOS() {
   const userAgent = navigator.userAgent;
   const platform = navigator.platform;
-  
+
   if (userAgent.includes('Win')) return 'windows';
   if (userAgent.includes('Mac')) return 'mac';
   if (userAgent.includes('Linux') || userAgent.includes('X11')) return 'linux';
   if (/iPad|iPhone|iPod/.test(userAgent)) return 'ios';
   if (userAgent.includes('Android')) return 'android';
-  
+
   return 'unknown';
 }
 
@@ -72,7 +72,7 @@ try {
     chrome.scripting.insertCSS({
       target: { tabId },
       files: ['content-scripts/styles.css']
-    }).catch(() => {});
+    }).catch(() => { });
 
     chrome.scripting.executeScript({
       target: { tabId },
@@ -85,9 +85,9 @@ try {
 
 // Listen for messages from content script
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
- if (request.action === "getOS") {
-    sendResponse({os: detectOS()});
- } else if (request.action === "launchRustDesk") {
+  if (request.action === "getOS") {
+    sendResponse({ os: detectOS() });
+  } else if (request.action === "launchRustDesk") {
     // Attempt to launch RustDesk with the provided connection info
     const { peerId, peerIp, peerHost, os } = request;
 
@@ -122,6 +122,48 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         console.error("Failed to launch RustDesk:", error);
         sendResponse({ success: false, error: error.message, command, url: launchUrl });
       });
+  } else if (request.action === "launchRustDeskTerminal") {
+    // Launch RustDesk in terminal mode
+    const { peerIp, peerHost } = request;
+    // Prefer IP over hostname for terminal mode
+    const targetBase = (peerIp && peerIp.trim()) || (peerHost && peerHost.trim()) || '';
+    if (!targetBase) {
+      sendResponse({ success: false, error: 'No ADDRESS found (host or IP) for this peer.' });
+      return true;
+    }
+
+    // Use rustdesk://terminal/<IP> format (without port)
+    const launchUrl = `rustdesk://terminal/${encodeURI(targetBase)}`;
+
+    chrome.tabs.update(sender.tab.id, { url: launchUrl })
+      .then(() => {
+        sendResponse({ success: true, url: launchUrl });
+      })
+      .catch(error => {
+        console.error("Failed to launch RustDesk Terminal:", error);
+        sendResponse({ success: false, error: error.message, url: launchUrl });
+      });
+  } else if (request.action === "launchRustDeskFileTransfer") {
+    // Launch RustDesk in file transfer mode
+    const { peerIp, peerHost } = request;
+    // Prefer IP over hostname for file transfer mode
+    const targetBase = (peerIp && peerIp.trim()) || (peerHost && peerHost.trim()) || '';
+    if (!targetBase) {
+      sendResponse({ success: false, error: 'No ADDRESS found (host or IP) for this peer.' });
+      return true;
+    }
+
+    // Use rustdesk://file-transfer/<IP> format (without port)
+    const launchUrl = `rustdesk://file-transfer/${encodeURI(targetBase)}`;
+
+    chrome.tabs.update(sender.tab.id, { url: launchUrl })
+      .then(() => {
+        sendResponse({ success: true, url: launchUrl });
+      })
+      .catch(error => {
+        console.error("Failed to launch RustDesk File Transfer:", error);
+        sendResponse({ success: false, error: error.message, url: launchUrl });
+      });
   } else if (request.action === "openPortTab") {
     const targetUrl = typeof request.url === 'string' ? request.url : '';
     if (!targetUrl) {
@@ -143,7 +185,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ success: false, error: e.message || String(e) });
     }
   }
-  
+
   // Return true to indicate we'll send a response asynchronously
   return true;
 });

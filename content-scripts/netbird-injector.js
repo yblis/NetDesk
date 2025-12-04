@@ -10,7 +10,7 @@ var servicePorts = DEFAULT_SERVICE_PORTS.slice();
 console.log('NetDesk content script loaded');
 
 // Get the OS type from the background script
-chrome.runtime.sendMessage({action: "getOS"}, (response) => {
+chrome.runtime.sendMessage({ action: "getOS" }, (response) => {
   if (response && response.os) {
     osType = response.os;
     console.log("Detected OS:", osType);
@@ -193,11 +193,11 @@ function createRustDeskMenuItem(peerInfo) {
   menuItem.className = 'relative flex select-none items-center rounded-md pr-2 pl-3 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer dark:hover:bg-nb-gray-900 dark:hover:text-gray-50 dark:focus:bg-nb-gray-900 dark:focus:text-gray-50 netdesk-rustdesk-item';
   const inner = document.createElement('div');
   inner.className = 'flex gap-3 items-center w-full justify-between';
-  
+
   // Create left side container with icon and label
   const leftSide = document.createElement('div');
   leftSide.className = 'flex items-center gap-2';
-  
+
   // Add RustDesk icon
   const iconImg = document.createElement('img');
   try {
@@ -209,20 +209,20 @@ function createRustDeskMenuItem(peerInfo) {
   iconImg.style.cssText = 'width: 16px; height: 16px; display: block;';
   iconImg.alt = 'RustDesk';
   leftSide.appendChild(iconImg);
-  
+
   const labelSpan = document.createElement('span');
-  labelSpan.textContent = 'RustDesk';
+  labelSpan.textContent = 'Remote Desktop (RustDesk)';
   leftSide.appendChild(labelSpan);
-  
+
   inner.appendChild(leftSide);
-  
+
   const targetSpan = document.createElement('span');
   targetSpan.className = 'text-xs text-gray-500 dark:text-gray-400';
   const displayTarget = peerInfo.peerHost || peerInfo.peerIp || peerInfo.peerName || '';
   targetSpan.textContent = displayTarget;
   inner.appendChild(targetSpan);
   menuItem.appendChild(inner);
-  
+
   menuItem.addEventListener('click', () => {
     const finalPeerIp = peerInfo.peerIp || '';
     const finalPeerHost = peerInfo.peerHost || '';
@@ -263,7 +263,7 @@ function createPortMenuItem(peerInfo, port, targetUrl) {
   targetSpan.textContent = displayTarget;
   inner.appendChild(targetSpan);
   menuItem.appendChild(inner);
-  
+
   menuItem.addEventListener('click', () => {
     if (!targetUrl) return;
     chrome.runtime.sendMessage({ action: 'openPortTab', url: targetUrl }, (response) => {
@@ -290,20 +290,144 @@ function findPortInsertAnchor(menuEl) {
   return deleteCandidate || null;
 }
 
+// Create Terminal menu item for dropdown
+function createTerminalMenuItem(peerInfo) {
+  const menuItem = document.createElement('div');
+  menuItem.setAttribute('role', 'menuitem');
+  menuItem.setAttribute('tabindex', '-1');
+  menuItem.className = 'relative flex select-none items-center rounded-md pr-2 pl-3 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer dark:hover:bg-nb-gray-900 dark:hover:text-gray-50 dark:focus:bg-nb-gray-900 dark:focus:text-gray-50 netdesk-terminal-item';
+  const inner = document.createElement('div');
+  inner.className = 'flex gap-3 items-center w-full justify-between';
+
+  const leftSide = document.createElement('div');
+  leftSide.className = 'flex items-center gap-2';
+
+  // Terminal SVG icon
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSvg.setAttribute('width', '16');
+  iconSvg.setAttribute('height', '16');
+  iconSvg.setAttribute('viewBox', '0 0 24 24');
+  iconSvg.setAttribute('fill', 'none');
+  iconSvg.setAttribute('stroke', 'currentColor');
+  iconSvg.setAttribute('stroke-width', '2');
+  iconSvg.setAttribute('stroke-linecap', 'round');
+  iconSvg.setAttribute('stroke-linejoin', 'round');
+  iconSvg.innerHTML = '<polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line>';
+  leftSide.appendChild(iconSvg);
+
+  const labelSpan = document.createElement('span');
+  labelSpan.textContent = 'Terminal (RustDesk)';
+  leftSide.appendChild(labelSpan);
+
+  inner.appendChild(leftSide);
+
+  const targetSpan = document.createElement('span');
+  targetSpan.className = 'text-xs text-gray-500 dark:text-gray-400';
+  const displayTarget = peerInfo.peerHost || peerInfo.peerIp || peerInfo.peerName || '';
+  targetSpan.textContent = displayTarget;
+  inner.appendChild(targetSpan);
+  menuItem.appendChild(inner);
+
+  menuItem.addEventListener('click', () => {
+    const finalPeerIp = peerInfo.peerIp || '';
+    const finalPeerHost = peerInfo.peerHost || '';
+    if (!finalPeerHost && !finalPeerIp) {
+      alert('Adresse introuvable. Impossible de lancer le terminal.');
+      return;
+    }
+    chrome.runtime.sendMessage({
+      action: "launchRustDeskTerminal",
+      peerIp: finalPeerIp,
+      peerHost: finalPeerHost
+    }, (response) => {
+      if (response && !response.success) {
+        alert(`Échec du lancement du terminal: ${response.error}`);
+      }
+    });
+  });
+  return menuItem;
+}
+
+// Create File Transfer menu item for dropdown
+function createFileTransferMenuItem(peerInfo) {
+  const menuItem = document.createElement('div');
+  menuItem.setAttribute('role', 'menuitem');
+  menuItem.setAttribute('tabindex', '-1');
+  menuItem.className = 'relative flex select-none items-center rounded-md pr-2 pl-3 py-1.5 text-sm outline-none transition-colors hover:bg-gray-100 hover:text-gray-900 focus:bg-gray-100 focus:text-gray-900 data-[disabled]:pointer-events-none data-[disabled]:opacity-50 cursor-pointer dark:hover:bg-nb-gray-900 dark:hover:text-gray-50 dark:focus:bg-nb-gray-900 dark:focus:text-gray-50 netdesk-filetransfer-item';
+  const inner = document.createElement('div');
+  inner.className = 'flex gap-3 items-center w-full justify-between';
+
+  const leftSide = document.createElement('div');
+  leftSide.className = 'flex items-center gap-2';
+
+  // File Transfer SVG icon
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSvg.setAttribute('width', '16');
+  iconSvg.setAttribute('height', '16');
+  iconSvg.setAttribute('viewBox', '0 0 24 24');
+  iconSvg.setAttribute('fill', 'none');
+  iconSvg.setAttribute('stroke', 'currentColor');
+  iconSvg.setAttribute('stroke-width', '2');
+  iconSvg.setAttribute('stroke-linecap', 'round');
+  iconSvg.setAttribute('stroke-linejoin', 'round');
+  iconSvg.innerHTML = '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><polyline points="9 14 12 11 15 14"></polyline>';
+  leftSide.appendChild(iconSvg);
+
+  const labelSpan = document.createElement('span');
+  labelSpan.textContent = 'Transfert (RustDesk)';
+  leftSide.appendChild(labelSpan);
+
+  inner.appendChild(leftSide);
+
+  const targetSpan = document.createElement('span');
+  targetSpan.className = 'text-xs text-gray-500 dark:text-gray-400';
+  const displayTarget = peerInfo.peerHost || peerInfo.peerIp || peerInfo.peerName || '';
+  targetSpan.textContent = displayTarget;
+  inner.appendChild(targetSpan);
+  menuItem.appendChild(inner);
+
+  menuItem.addEventListener('click', () => {
+    const finalPeerIp = peerInfo.peerIp || '';
+    const finalPeerHost = peerInfo.peerHost || '';
+    if (!finalPeerHost && !finalPeerIp) {
+      alert('Adresse introuvable. Impossible de lancer le transfert.');
+      return;
+    }
+    chrome.runtime.sendMessage({
+      action: "launchRustDeskFileTransfer",
+      peerIp: finalPeerIp,
+      peerHost: finalPeerHost
+    }, (response) => {
+      if (response && !response.success) {
+        alert(`Échec du lancement du transfert: ${response.error}`);
+      }
+    });
+  });
+  return menuItem;
+}
+
 function injectPortLinks(menuEl, peerInfo) {
   if (!menuEl || menuEl.dataset.netdeskPortsInjected === '1') return;
   if (!peerInfo || !peerInfo.row) return;
   const targetExists = (peerInfo.peerHost && peerInfo.peerHost.trim()) || (peerInfo.peerIp && peerInfo.peerIp.trim());
   if (!targetExists) return;
-  
+
   const fragment = document.createDocumentFragment();
-  
-  // Add RustDesk menu item first (only for active peers and if enabled)
+
+  // Add RustDesk menu items (only for active peers and if enabled)
   if (rustdeskEnabled && isPeerActive(peerInfo.row)) {
     const rustdeskItem = createRustDeskMenuItem(peerInfo);
     fragment.appendChild(rustdeskItem);
+
+    // Add Terminal menu item
+    const terminalItem = createTerminalMenuItem(peerInfo);
+    fragment.appendChild(terminalItem);
+
+    // Add File Transfer menu item
+    const fileTransferItem = createFileTransferMenuItem(peerInfo);
+    fragment.appendChild(fileTransferItem);
   }
-  
+
   // Add port items
   const ports = (Array.isArray(servicePorts) && servicePorts.length > 0) ? servicePorts : DEFAULT_SERVICE_PORTS;
   let itemsCount = 0;
@@ -314,9 +438,9 @@ function injectPortLinks(menuEl, peerInfo) {
     fragment.appendChild(item);
     itemsCount++;
   }
-  
+
   if (itemsCount === 0 && fragment.childNodes.length === 0) return;
-  
+
   const separator = document.createElement('div');
   separator.setAttribute('role', 'separator');
   separator.setAttribute('aria-orientation', 'horizontal');
@@ -415,7 +539,7 @@ function setupRouteObserver() {
       ['pushState', 'replaceState'].forEach((method) => {
         const original = history[method];
         if (typeof original === 'function') {
-          history[method] = function(...args) {
+          history[method] = function (...args) {
             const result = original.apply(this, args);
             handleRouteChange();
             return result;
@@ -477,18 +601,37 @@ function extractAddressFromRow(row) {
   };
 
   const cells = Array.from(row.querySelectorAll('td'));
+  let foundHost = '';
+  let foundIp = '';
+
   // Try detected ADDRESS column first
   if (addressColIndex < 0) addressColIndex = detectAddressColumnIndex();
   if (addressColIndex >= 0 && cells[addressColIndex]) {
     const res = parseCell(cells[addressColIndex]);
-    if (res.host || res.ip) return res;
+    if (res.host) foundHost = res.host;
+    if (res.ip) foundIp = res.ip;
   }
-  // Fallback: scan all cells
-  for (const cell of cells) {
-    const res = parseCell(cell);
-    if (res.host || res.ip) return res;
+
+  // If we didn't find IP, scan all cells
+  if (!foundIp) {
+    for (const cell of cells) {
+      const res = parseCell(cell);
+      if (!foundHost && res.host) foundHost = res.host;
+      if (!foundIp && res.ip) foundIp = res.ip;
+      if (foundHost && foundIp) break;
+    }
   }
-  return { host: '', ip: '' };
+
+  // Last resort: extract IP from entire row text (use innerText as it seems more reliable here)
+  if (!foundIp) {
+    const rowText = (row.innerText || row.textContent || '').trim();
+    const ipMatch = rowText.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/);
+    if (ipMatch) {
+      foundIp = ipMatch[0];
+    }
+  }
+
+  return { host: foundHost, ip: foundIp };
 }
 
 // Determine whether a peer row is online (green dot)
@@ -516,7 +659,7 @@ function createPeerDetailRustDeskButton(peerHost, peerIp, peerName) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'relative text-sm focus:z-10 focus:ring-2 font-medium focus:outline-none whitespace-nowrap shadow-sm inline-flex gap-2 items-center justify-center transition-colors focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:text-nb-gray-300 dark:ring-offset-neutral-950/50 bg-white hover:text-black focus:ring-zinc-200/50 hover:bg-gray-100 border-gray-200 text-gray-900 dark:ring-offset-neutral-950/50 dark:focus:ring-neutral-500/20 dark:bg-nb-gray-920 dark:text-gray-400 dark:border-gray-700/40 dark:hover:text-white dark:hover:bg-zinc-800/50 text-sm py-2.5 px-4 rounded-md border border-transparent netdesk-peer-detail-btn';
-  
+
   // Add RustDesk icon
   const iconImg = document.createElement('img');
   try {
@@ -527,11 +670,11 @@ function createPeerDetailRustDeskButton(peerHost, peerIp, peerName) {
   iconImg.style.cssText = 'width: 16px; height: 16px; display: block;';
   iconImg.alt = 'RustDesk';
   button.appendChild(iconImg);
-  
+
   // Add label
   const label = document.createTextNode('RustDesk');
   button.appendChild(label);
-  
+
   button.addEventListener('click', () => {
     if (!peerHost && !peerIp) {
       console.warn('No ADDRESS found for peer; aborting RustDesk launch');
@@ -551,36 +694,124 @@ function createPeerDetailRustDeskButton(peerHost, peerIp, peerName) {
       }
     });
   });
-  
+
   return button;
 }
 
-// Function to inject RustDesk button on peer detail page
+// Function to create Terminal button for peer detail page
+function createPeerDetailTerminalButton(peerHost, peerIp) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'relative text-sm focus:z-10 focus:ring-2 font-medium focus:outline-none whitespace-nowrap shadow-sm inline-flex gap-2 items-center justify-center transition-colors focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:text-nb-gray-300 dark:ring-offset-neutral-950/50 bg-white hover:text-black focus:ring-zinc-200/50 hover:bg-gray-100 border-gray-200 text-gray-900 dark:ring-offset-neutral-950/50 dark:focus:ring-neutral-500/20 dark:bg-nb-gray-920 dark:text-gray-400 dark:border-gray-700/40 dark:hover:text-white dark:hover:bg-zinc-800/50 text-sm py-2.5 px-4 rounded-md border border-transparent netdesk-peer-detail-terminal-btn';
+
+  // Terminal SVG icon
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSvg.setAttribute('width', '16');
+  iconSvg.setAttribute('height', '16');
+  iconSvg.setAttribute('viewBox', '0 0 24 24');
+  iconSvg.setAttribute('fill', 'none');
+  iconSvg.setAttribute('stroke', 'currentColor');
+  iconSvg.setAttribute('stroke-width', '2');
+  iconSvg.setAttribute('stroke-linecap', 'round');
+  iconSvg.setAttribute('stroke-linejoin', 'round');
+  iconSvg.innerHTML = '<polyline points="4 17 10 11 4 5"></polyline><line x1="12" y1="19" x2="20" y2="19"></line>';
+  button.appendChild(iconSvg);
+
+  // Add label
+  const label = document.createTextNode('Terminal');
+  button.appendChild(label);
+
+  button.addEventListener('click', () => {
+    if (!peerHost && !peerIp) {
+      console.warn('No ADDRESS found for peer; aborting Terminal launch');
+      alert('Adresse introuvable. Impossible de lancer le terminal.');
+      return;
+    }
+    chrome.runtime.sendMessage({
+      action: "launchRustDeskTerminal",
+      peerIp: peerIp || '',
+      peerHost: peerHost || ''
+    }, (response) => {
+      if (response && !response.success) {
+        console.error("Failed to launch Terminal:", response.error);
+        alert(`Échec du lancement du terminal: ${response.error}`);
+      }
+    });
+  });
+
+  return button;
+}
+
+// Function to create File Transfer button for peer detail page
+function createPeerDetailFileTransferButton(peerHost, peerIp) {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'relative text-sm focus:z-10 focus:ring-2 font-medium focus:outline-none whitespace-nowrap shadow-sm inline-flex gap-2 items-center justify-center transition-colors focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:text-nb-gray-300 dark:ring-offset-neutral-950/50 bg-white hover:text-black focus:ring-zinc-200/50 hover:bg-gray-100 border-gray-200 text-gray-900 dark:ring-offset-neutral-950/50 dark:focus:ring-neutral-500/20 dark:bg-nb-gray-920 dark:text-gray-400 dark:border-gray-700/40 dark:hover:text-white dark:hover:bg-zinc-800/50 text-sm py-2.5 px-4 rounded-md border border-transparent netdesk-peer-detail-filetransfer-btn';
+
+  // File Transfer SVG icon (folder with arrow)
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSvg.setAttribute('width', '16');
+  iconSvg.setAttribute('height', '16');
+  iconSvg.setAttribute('viewBox', '0 0 24 24');
+  iconSvg.setAttribute('fill', 'none');
+  iconSvg.setAttribute('stroke', 'currentColor');
+  iconSvg.setAttribute('stroke-width', '2');
+  iconSvg.setAttribute('stroke-linecap', 'round');
+  iconSvg.setAttribute('stroke-linejoin', 'round');
+  iconSvg.innerHTML = '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path><line x1="12" y1="11" x2="12" y2="17"></line><polyline points="9 14 12 11 15 14"></polyline>';
+  button.appendChild(iconSvg);
+
+  // Add label
+  const label = document.createTextNode('Transfert');
+  button.appendChild(label);
+
+  button.addEventListener('click', () => {
+    if (!peerHost && !peerIp) {
+      console.warn('No ADDRESS found for peer; aborting File Transfer launch');
+      alert('Adresse introuvable. Impossible de lancer le transfert de fichiers.');
+      return;
+    }
+    chrome.runtime.sendMessage({
+      action: "launchRustDeskFileTransfer",
+      peerIp: peerIp || '',
+      peerHost: peerHost || ''
+    }, (response) => {
+      if (response && !response.success) {
+        console.error("Failed to launch File Transfer:", response.error);
+        alert(`Échec du lancement du transfert: ${response.error}`);
+      }
+    });
+  });
+
+  return button;
+}
+
+// Function to inject RustDesk buttons on peer detail page
 function injectPeerDetailButton() {
-  console.log('Attempting to inject RustDesk button on peer detail page');
-  
+  console.log('Attempting to inject RustDesk buttons on peer detail page');
+
   if (!isPeerDetailPage()) {
     console.log('Not on peer detail page');
     return;
   }
-  
+
   // Check if RustDesk is enabled
   if (!rustdeskEnabled) {
     console.log('RustDesk is disabled in settings');
     return;
   }
-  
-  // Check if button already exists
+
+  // Check if buttons already exist
   if (document.querySelector('.netdesk-peer-detail-btn')) {
-    console.log('RustDesk button already exists on peer detail page');
+    console.log('RustDesk buttons already exist on peer detail page');
     return;
   }
-  
+
   // Find the button container (div.flex.gap-3)
   // Look for buttons (RDP, SSH, etc.) to find the right container
   const allButtons = Array.from(document.querySelectorAll('button'));
   let buttonContainer = null;
-  
+
   for (const btn of allButtons) {
     const text = (btn.textContent || '').toLowerCase();
     if (text.includes('rdp') || text.includes('ssh')) {
@@ -592,33 +823,33 @@ function injectPeerDetailButton() {
       }
     }
   }
-  
+
   if (!buttonContainer) {
     console.log('Button container not found on peer detail page');
     return;
   }
-  
+
   // Extract peer information from the page
   let peerName = '';
   let peerHost = '';
   let peerIp = '';
-  
+
   // Try to find peer name from heading or title
   const heading = document.querySelector('h1, h2, h3');
   if (heading) {
     peerName = heading.textContent.trim();
   }
-  
+
   // Try to find address information from the info list
   // Look for "NetBird IP Address" and "Domain Name" sections
   const listItems = Array.from(document.querySelectorAll('li.flex.justify-between'));
-  
+
   for (const item of listItems) {
     const labelDiv = item.querySelector('div.flex.gap-2\\.5');
     if (!labelDiv) continue;
-    
+
     const labelText = (labelDiv.textContent || '').toLowerCase();
-    
+
     // Check for NetBird IP Address
     if (labelText.includes('netbird ip') || labelText.includes('ip address')) {
       const valueDiv = item.querySelector('.text-right .truncate');
@@ -631,7 +862,7 @@ function injectPeerDetailButton() {
         }
       }
     }
-    
+
     // Check for Domain Name
     if (labelText.includes('domain name') || labelText.includes('hostname')) {
       const valueDiv = item.querySelector('.text-right .truncate');
@@ -649,23 +880,32 @@ function injectPeerDetailButton() {
       }
     }
   }
-  
+
   console.log('Peer detail info:', { peerName, peerHost, peerIp });
-  
-  // Create and inject the button
-  const rustdeskButton = createPeerDetailRustDeskButton(peerHost, peerIp, peerName);
-  
-  // Create wrapper div matching the structure of existing buttons
+
+  // Create wrapper for all RustDesk buttons
   const wrapper = document.createElement('div');
   const innerWrapper = document.createElement('div');
-  innerWrapper.className = 'inline-flex w-full';
+  innerWrapper.className = 'inline-flex gap-2 w-full';
+
+  // Create and add the main RustDesk button
+  const rustdeskButton = createPeerDetailRustDeskButton(peerHost, peerIp, peerName);
   innerWrapper.appendChild(rustdeskButton);
+
+  // Create and add Terminal button
+  const terminalButton = createPeerDetailTerminalButton(peerHost, peerIp);
+  innerWrapper.appendChild(terminalButton);
+
+  // Create and add File Transfer button
+  const fileTransferButton = createPeerDetailFileTransferButton(peerHost, peerIp);
+  innerWrapper.appendChild(fileTransferButton);
+
   wrapper.appendChild(innerWrapper);
-  
+
   // Insert at the end of the button container (next to RDP/SSH buttons)
   buttonContainer.appendChild(wrapper);
-  
-  console.log('RustDesk button injected on peer detail page');
+
+  console.log('RustDesk buttons injected on peer detail page');
 }
 
 // Function to cache peer data from table rows
@@ -675,16 +915,16 @@ function cachePeerData() {
   if (!isPeersPage()) {
     return;
   }
-  
+
   // Try to find the peer table rows in NetBird dashboard
   const peerRows = document.querySelectorAll('tbody tr[data-row-id]');
   console.log('Found peer rows:', peerRows.length);
-  
+
   if (peerRows.length === 0) {
     // Try alternative selectors for the actual NetBird structure
     const altRows = document.querySelectorAll('tr.group\\/table-row[data-row-id]');
     console.log('Alternative selector found rows:', altRows.length);
-    
+
     if (altRows.length > 0) {
       altRows.forEach((row, index) => {
         processPeerRowData(row, index);
@@ -692,7 +932,7 @@ function cachePeerData() {
       return;
     }
   }
-  
+
   peerRows.forEach((row, index) => {
     processPeerRowData(row, index);
   });
@@ -701,17 +941,17 @@ function cachePeerData() {
 // Helper function to cache peer data from a row
 function processPeerRowData(row, index) {
   console.log(`Processing peer data for row ${index}:`, row);
-  
+
   // Find the peer name cell using the data-testid attribute
   const peerNameCell = row.querySelector('[data-testid="peer-name-cell"]');
-  
+
   if (peerNameCell) {
     const peerNameElement = peerNameCell.querySelector('.truncate');
-    
+
     if (peerNameElement) {
       const peerName = peerNameElement.textContent.trim();
       console.log(`Row ${index} peer name:`, peerName);
-      
+
       if (peerName) {
         const { host: peerHost, ip: peerIp } = extractAddressFromRow(row);
         console.log(`Row ${index} ADDRESS parsed: host='${peerHost}', ip='${peerIp}'`);
@@ -726,7 +966,7 @@ function processPeerRowData(row, index) {
     if (nameDiv) {
       const peerName = nameDiv.textContent.trim();
       console.log(`Row ${index} found peer name in alternative structure:`, peerName);
-      
+
       if (peerName) {
         const { host: peerHost, ip: peerIp } = extractAddressFromRow(row);
         console.log(`Row ${index} ADDRESS parsed (alt): host='${peerHost}', ip='${peerIp}'`);
@@ -749,7 +989,7 @@ function observeDashboard() {
   const observer = new MutationObserver((mutations) => {
     let shouldCache = false;
     let shouldInjectDetail = false;
-    
+
     mutations.forEach((mutation) => {
       if (mutation.type === 'childList') {
         if (mutation.addedNodes.length > 0) {
@@ -768,17 +1008,17 @@ function observeDashboard() {
         }
       }
     });
-    
+
     if (shouldCache && isPeersPage()) {
       // Small delay to ensure DOM is fully updated
       setTimeout(cachePeerData, 100);
     }
-    
+
     if (shouldInjectDetail && isPeerDetailPage()) {
       setTimeout(injectPeerDetailButton, 100);
     }
   });
-  
+
   // Start observing the document body for changes
   observer.observe(document.body, {
     childList: true,
@@ -786,7 +1026,7 @@ function observeDashboard() {
     attributes: true,
     attributeFilter: ['data-cy-status', 'class']
   });
-  
+
   // Initial actions based on current page
   if (isPeersPage()) {
     setTimeout(cachePeerData, 1000);
