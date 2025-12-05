@@ -842,41 +842,52 @@ function injectPeerDetailButton() {
 
   // Try to find address information from the info list
   // Look for "NetBird IP Address" and "Domain Name" sections
-  const listItems = Array.from(document.querySelectorAll('li.flex.justify-between'));
+  // Try to find address information from the info list
+  // Look for "NetBird IP Address" and "Domain Name" sections
+  // We scan all LI elements to be robust against layout changes
+  const listItems = Array.from(document.querySelectorAll('li'));
 
   for (const item of listItems) {
-    const labelDiv = item.querySelector('div.flex.gap-2\\.5');
-    if (!labelDiv) continue;
+    const itemText = (item.innerText || item.textContent || '').trim();
+    if (!itemText) continue;
 
-    const labelText = (labelDiv.textContent || '').toLowerCase();
+    // Normalize text for checking labels
+    const lowerText = itemText.toLowerCase();
 
     // Check for NetBird IP Address
-    if (labelText.includes('netbird ip') || labelText.includes('ip address')) {
-      const valueDiv = item.querySelector('.text-right .truncate');
-      if (valueDiv) {
-        const ipText = valueDiv.textContent.trim();
-        const ipMatch = ipText.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/);
-        if (ipMatch) {
-          peerIp = ipMatch[0];
-          console.log('Found NetBird IP:', peerIp);
-        }
+    // We look for the label, then try to extract an IP from the same row's text
+    if (lowerText.includes('netbird ip') || lowerText.includes('ip address')) {
+      const ipMatch = itemText.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/);
+      if (ipMatch) {
+        peerIp = ipMatch[0];
+        console.log('Found NetBird IP (robust scan):', peerIp);
       }
     }
 
-    // Check for Domain Name
-    if (labelText.includes('domain name') || labelText.includes('hostname')) {
-      const valueDiv = item.querySelector('.text-right .truncate');
-      if (valueDiv) {
-        const domainText = valueDiv.textContent.trim();
-        // Extract domain/hostname (skip if it looks like "Hostname" or is empty)
-        if (domainText && !domainText.toLowerCase().includes('hostname') && domainText.includes('.')) {
-          peerHost = domainText;
-          console.log('Found Domain Name:', peerHost);
-        } else if (domainText && labelText.includes('hostname') && !domainText.includes('.')) {
-          // If it's just a hostname without domain, still use it
-          peerName = domainText;
-          console.log('Found Hostname:', peerName);
+    // Check for Domain Name / Hostname
+    if (lowerText.includes('domain name') || (lowerText.includes('hostname') && !lowerText.includes('system'))) {
+      // First try: look for a distinct value element (often 'truncate' or just the last div)
+      const possibleValues = Array.from(item.querySelectorAll('div, span, p'));
+      let foundValue = '';
+
+      // Reverse iterate to find the last contentful element that isn't the label
+      for (let i = possibleValues.length - 1; i >= 0; i--) {
+        const t = (possibleValues[i].textContent || '').trim();
+        if (t && !t.toLowerCase().includes('domain name') && !t.toLowerCase().includes('hostname')) {
+          foundValue = t;
+          break;
         }
+      }
+
+      // Fallback: if no distinct element found, try to strip the label from the full text
+      if (!foundValue) {
+        foundValue = itemText.replace(/domain name|hostname/gi, '').replace(/[:]/g, '').trim();
+      }
+
+      // Sanity check the found value
+      if (foundValue && foundValue.length > 1) {
+        peerHost = foundValue;
+        console.log('Found Domain/Host (robust scan):', peerHost);
       }
     }
   }
