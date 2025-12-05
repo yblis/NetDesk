@@ -198,17 +198,18 @@ function createRustDeskMenuItem(peerInfo) {
   const leftSide = document.createElement('div');
   leftSide.className = 'flex items-center gap-2';
 
-  // Add RustDesk icon
-  const iconImg = document.createElement('img');
-  try {
-    iconImg.src = chrome.runtime.getURL('icons/icon32.png');
-  } catch (e) {
-    iconImg.src = 'icons/icon32.png';
-  }
-  iconImg.className = 'rustdesk-menu-icon';
-  iconImg.style.cssText = 'width: 16px; height: 16px; display: block;';
-  iconImg.alt = 'RustDesk';
-  leftSide.appendChild(iconImg);
+  // Add RustDesk icon (SVG)
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSvg.setAttribute('width', '16');
+  iconSvg.setAttribute('height', '16');
+  iconSvg.setAttribute('viewBox', '0 0 24 24');
+  iconSvg.setAttribute('fill', 'none');
+  iconSvg.setAttribute('stroke', 'currentColor');
+  iconSvg.setAttribute('stroke-width', '2');
+  iconSvg.setAttribute('stroke-linecap', 'round');
+  iconSvg.setAttribute('stroke-linejoin', 'round');
+  iconSvg.innerHTML = '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>';
+  leftSide.appendChild(iconSvg);
 
   const labelSpan = document.createElement('span');
   labelSpan.textContent = 'Remote Desktop (RustDesk)';
@@ -660,19 +661,21 @@ function createPeerDetailRustDeskButton(peerHost, peerIp, peerName) {
   button.type = 'button';
   button.className = 'relative text-sm focus:z-10 focus:ring-2 font-medium focus:outline-none whitespace-nowrap shadow-sm inline-flex gap-2 items-center justify-center transition-colors focus:ring-offset-1 disabled:opacity-40 disabled:cursor-not-allowed disabled:dark:text-nb-gray-300 dark:ring-offset-neutral-950/50 bg-white hover:text-black focus:ring-zinc-200/50 hover:bg-gray-100 border-gray-200 text-gray-900 dark:ring-offset-neutral-950/50 dark:focus:ring-neutral-500/20 dark:bg-nb-gray-920 dark:text-gray-400 dark:border-gray-700/40 dark:hover:text-white dark:hover:bg-zinc-800/50 text-sm py-2.5 px-4 rounded-md border border-transparent netdesk-peer-detail-btn';
 
-  // Add RustDesk icon
-  const iconImg = document.createElement('img');
-  try {
-    iconImg.src = chrome.runtime.getURL('icons/icon32.png');
-  } catch (e) {
-    iconImg.src = 'icons/icon32.png';
-  }
-  iconImg.style.cssText = 'width: 16px; height: 16px; display: block;';
-  iconImg.alt = 'RustDesk';
-  button.appendChild(iconImg);
+  // Add RustDesk icon (SVG)
+  const iconSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  iconSvg.setAttribute('width', '16');
+  iconSvg.setAttribute('height', '16');
+  iconSvg.setAttribute('viewBox', '0 0 24 24');
+  iconSvg.setAttribute('fill', 'none');
+  iconSvg.setAttribute('stroke', 'currentColor');
+  iconSvg.setAttribute('stroke-width', '2');
+  iconSvg.setAttribute('stroke-linecap', 'round');
+  iconSvg.setAttribute('stroke-linejoin', 'round');
+  iconSvg.innerHTML = '<rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line>';
+  button.appendChild(iconSvg);
 
   // Add label
-  const label = document.createTextNode('RustDesk');
+  const label = document.createTextNode('Remote Desktop (RustDesk)');
   button.appendChild(label);
 
   button.addEventListener('click', () => {
@@ -718,7 +721,7 @@ function createPeerDetailTerminalButton(peerHost, peerIp) {
   button.appendChild(iconSvg);
 
   // Add label
-  const label = document.createTextNode('Terminal');
+  const label = document.createTextNode('Terminal (RustDesk)');
   button.appendChild(label);
 
   button.addEventListener('click', () => {
@@ -762,7 +765,7 @@ function createPeerDetailFileTransferButton(peerHost, peerIp) {
   button.appendChild(iconSvg);
 
   // Add label
-  const label = document.createTextNode('Transfert');
+  const label = document.createTextNode('Transfert (RustDesk)');
   button.appendChild(label);
 
   button.addEventListener('click', () => {
