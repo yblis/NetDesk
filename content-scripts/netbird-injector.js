@@ -675,7 +675,7 @@ function createPeerDetailRustDeskButton(peerHost, peerIp, peerName) {
   button.appendChild(iconSvg);
 
   // Add label
-  const label = document.createTextNode('Remote Desktop (RustDesk)');
+  const label = document.createTextNode('Remote Desktop');
   button.appendChild(label);
 
   button.addEventListener('click', () => {
@@ -721,7 +721,7 @@ function createPeerDetailTerminalButton(peerHost, peerIp) {
   button.appendChild(iconSvg);
 
   // Add label
-  const label = document.createTextNode('Terminal (RustDesk)');
+  const label = document.createTextNode('Terminal');
   button.appendChild(label);
 
   button.addEventListener('click', () => {
@@ -765,7 +765,7 @@ function createPeerDetailFileTransferButton(peerHost, peerIp) {
   button.appendChild(iconSvg);
 
   // Add label
-  const label = document.createTextNode('Transfert (RustDesk)');
+  const label = document.createTextNode('Transfert');
   button.appendChild(label);
 
   button.addEventListener('click', () => {
@@ -916,8 +916,148 @@ function injectPeerDetailButton() {
 
   wrapper.appendChild(innerWrapper);
 
-  // Insert at the end of the button container (next to RDP/SSH buttons)
-  buttonContainer.appendChild(wrapper);
+  // Find the 'Remote Access' card to insert after
+  // Strategy: Traverse up from the button container until we find the element 
+  // whose next sibling is the "Assigned Groups" card (or just the card below it).
+  let remoteAccessCard = null;
+
+  if (buttonContainer) {
+    let current = buttonContainer.parentElement;
+    // Safety limit for traversal
+    for (let i = 0; i < 15; i++) {
+      if (!current || current === document.body) break;
+
+      // Check siblings to see if we are at the "Card" level
+      const nextSib = current.nextElementSibling;
+
+      const nextText = nextSib ? (nextSib.innerText || '').toLowerCase() : '';
+
+      // "Assigned Groups" is typically the card immediately following "Remote Access"
+      if (nextText.includes('assigned groups')) {
+        remoteAccessCard = current;
+        console.log('Found Remote Access card by "Assigned Groups" sibling check');
+        break;
+      }
+
+      // Also check if valid card classes are present just in case "Assigned Groups" isn't there
+      // But we rely mainly on structure
+      current = current.parentElement;
+    }
+
+    // Secondary check: if we didn't find "Assigned Groups" (maybe last item?), 
+    // check if we are below "SSH Access"
+    if (!remoteAccessCard) {
+      current = buttonContainer.parentElement;
+      for (let i = 0; i < 15; i++) {
+        if (!current || current === document.body) break;
+        const prevSib = current.previousElementSibling;
+        const prevText = prevSib ? (prevSib.innerText || '').toLowerCase() : '';
+
+        // "SSH Access" or "Session Expiration" are usually above
+        if (prevText.includes('ssh access') || prevText.includes('session expiration')) {
+          remoteAccessCard = current;
+          console.log('Found Remote Access card by "SSH Access" sibling check');
+          break;
+        }
+        current = current.parentElement;
+      }
+    }
+  }
+
+  if (remoteAccessCard) {
+    console.log('Cloning Remote Access card for RustDesk section');
+
+    // Clone the card to preserve exact styling (border, radius, shadow, bg)
+    const rustDeskCard = remoteAccessCard.cloneNode(true);
+    rustDeskCard.removeAttribute('id');
+    rustDeskCard.className += ' netdesk-rustdesk-section mt-2'; // Reduced margin
+
+    // --- CONTENT UPDATE START ---
+
+    // 1. Update Title "Remote Access" -> "RustDesk"
+    // We look for the element containing "Remote Access" and replace it.
+    let titleReplaced = false;
+    const cardAllElements = rustDeskCard.querySelectorAll('*');
+    for (const el of cardAllElements) {
+      // Check direct text node content if possible, or just innerText matches strictly
+      // We avoid replacing the container's text if it has children
+      if (el.children.length === 0 && (el.textContent === 'Remote Access' || el.textContent === 'Remote Access ')) {
+        el.textContent = 'RustDesk';
+        titleReplaced = true;
+        break;
+      }
+    }
+    // Fallback: TreeWalker
+    if (!titleReplaced) {
+      const walker = document.createTreeWalker(rustDeskCard, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        if (walker.currentNode.nodeValue.trim() === 'Remote Access') {
+          walker.currentNode.nodeValue = 'RustDesk';
+          break;
+        }
+      }
+    }
+
+    // 2. Update Description
+    // Look for text describing SSH/RDP and replace with generic RustDesk text
+    const descWalker = document.createTreeWalker(rustDeskCard, NodeFilter.SHOW_TEXT);
+    while (descWalker.nextNode()) {
+      const val = descWalker.currentNode.nodeValue;
+      if (val.includes('SSH') || val.includes('RDP')) {
+        descWalker.currentNode.nodeValue = 'Connect directly to this peer via RustDesk';
+        // Typically only one such text exists
+        break;
+      }
+    }
+
+    // 3. Clear existing buttons in the clone and insert ours
+    // We need to find the specific container where buttons were. 
+    // It should be the parent of the cloned buttons.
+    const clonedButtons = rustDeskCard.querySelectorAll('button');
+    if (clonedButtons.length > 0) {
+      const btnParent = clonedButtons[0].parentElement;
+      btnParent.innerHTML = ''; // Start clean
+      btnParent.appendChild(wrapper); // Insert our RustDesk buttons wrapper
+    } else {
+      // If no buttons found in clone (unexpected), just append to main card
+      rustDeskCard.appendChild(wrapper);
+    }
+
+    // --- CONTENT UPDATE END ---
+
+    // Insert the new card AFTER the Remote Access card
+    remoteAccessCard.parentNode.insertBefore(rustDeskCard, remoteAccessCard.nextSibling);
+
+  } else {
+    console.warn('Could not find Remote Access card via sibling check. Using fallback injection.');
+    // Fallback: Create a simple container and append to the buttonContainer's parent's parent (Hoping to be outside the row)
+    // Or just inline if all else fails.
+
+    // Let's try to be a bit smarter than just inline.
+    // If we can't find the card, we might be inside it. 
+    // Let's try to append to the end of the `buttonContainer`'s parent (the card content wrapper)
+    // This usually puts it below the buttons but inside the card.
+    if (buttonContainer && buttonContainer.parentElement) {
+      const container = document.createElement('div');
+      container.className = 'mt-4 pt-4 border-t border-gray-100 dark:border-gray-700'; // Add separator
+
+      const title = document.createElement('h3');
+      title.className = 'text-sm font-medium text-gray-900 dark:text-gray-200 mb-1';
+      title.textContent = 'RustDesk';
+      container.appendChild(title);
+
+      const desc = document.createElement('p');
+      desc.className = 'text-sm text-gray-500 dark:text-gray-400 mb-4';
+      desc.textContent = 'Connect directly to this peer via RustDesk';
+      container.appendChild(desc);
+
+      container.appendChild(wrapper);
+
+      buttonContainer.parentElement.appendChild(container);
+    } else {
+      buttonContainer.appendChild(wrapper);
+    }
+  }
 
   console.log('RustDesk buttons injected on peer detail page');
 }
