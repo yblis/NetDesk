@@ -9,9 +9,10 @@ A Chrome extension that adds RustDesk connection buttons to the NetBird dashboar
 ## Features
 
 - Adds a "RustDesk" link in the peer context menu on the NetBird dashboard
-- Adds a "RustDesk" button on peer detail pages (next to RDP/SSH buttons)
+- **NEW**: Adds specific "Terminal" and "File Transfer" options in the context menu
+- Adds a "RustDesk" button on peer detail pages with additional options for Terminal and File Transfer
 - Automatically detects your operating system (Windows, macOS, Linux, iOS, Android)
-- Launches the appropriate RustDesk client for your OS using NetBird IP or domain name
+- Launches the appropriate RustDesk client mode (GUI, Terminal, File Transfer)
 - Supports custom NetBird dashboard URLs
 - Configurable button styles (text or icon)
 - Injects configurable "Open port" links in the peer action menu to launch service tabs quickly
@@ -30,13 +31,20 @@ A Chrome extension that adds RustDesk connection buttons to the NetBird dashboar
 ### From the peers list:
 1. Navigate to your NetBird dashboard (https://app.netbird.io or your custom URL)
 2. Right-click on a peer or open its context menu
-3. Click the "RustDesk" link (appears above "Open port" options for active peers)
-4. The appropriate RustDesk client for your OS will launch with the peer's NetBird IP or domain name
+3. You will see three RustDesk options for active peers:
+    - **Remote Desktop (RustDesk)**: Standard remote control
+    - **Terminal (RustDesk)**: Open remote terminal
+    - **Transfert (RustDesk)**: Open file transfer window
+4. Click the desired option to launch RustDesk in that specific mode
 
 ### From a peer detail page:
 1. Navigate to a peer detail page (`/peer?id=XXX`)
-2. Click the "RustDesk" button (appears next to RDP/SSH buttons)
-3. The appropriate RustDesk client for your OS will launch with the peer's NetBird IP or domain name
+2. A new "RustDesk" section will appear below the "Remote Access" card
+3. This section contains buttons for:
+    - **Remote Desktop**: Standard remote control
+    - **Terminal**: Open remote terminal
+    - **Transfert**: Open file transfer window
+4. Click any button to launch the corresponding RustDesk function
 
 ## Configuration
 
